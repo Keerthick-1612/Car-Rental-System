@@ -1,0 +1,29 @@
+Customers Table:
+
+CustomerID (Primary Key)
+FirstName
+LastName
+Email
+Phone
+Address
+
+
+
+Vehicles Table:
+
+VehicleID (Primary Key)
+Model
+Make
+Year
+RentalRate
+
+
+
+Rentals Table:
+
+RentalID (Primary Key)
+CustomerID (Foreign Key referencing Customers)
+VehicleID (Foreign Key referencing Vehicles)
+RentalDate
+ReturnDate
+TotalCost

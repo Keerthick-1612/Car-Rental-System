@@ -1,0 +1,263 @@
+REM @"C:\Users\KEERTHICK V\Desktop\DBMS_Project\Project\car_script.txt"
+drop table customers cascade constraints;
+drop table vehicles cascade constraints;
+drop table rentals cascade constraints;
+drop table deleted_rental cascade constraints;
+drop table bill cascade constraints;
+
+Create table bill(
+    fname VARCHAR2(50),
+    lname VARCHAR2(50),
+    sdate Date,
+    ldate Date,
+    up number,
+    total number
+);
+
+CREATE TABLE Customers (
+    CustomerID VARCHAR2(50) PRIMARY KEY,
+    FirstName VARCHAR2(50),
+    LastName VARCHAR2(50),
+    Email VARCHAR2(100) ,
+    Phone VARCHAR2(20),
+    Address VARCHAR2(255)
+);
+
+REM make means manufacturer
+CREATE TABLE Vehicles (
+    VehicleID VARCHAR2(50) ,
+    Model VARCHAR2(50),
+    Make VARCHAR2(50),
+    Year INT,
+    RentalRate DECIMAL(10, 2),
+    Seat Number,
+    Ac VARCHAR2(50)
+);	
+
+
+CREATE TABLE Rentals (
+    RentalID VARCHAR2(50),
+    CustomerID VARCHAR2(50),
+    VehicleID VARCHAR2(50),
+    RentalDate DATE,
+    ReturnDate DATE,
+    totalcost number
+);
+
+CREATE TABLE deleted_rental (
+    RentalID VARCHAR2(50) ,
+    CustomerID VARCHAR2(50),
+    VehicleID VARCHAR2(50),
+    RentalDate DATE,
+    ReturnDate DATE,
+    TotalCost DECIMAL(10, 2),
+    DeletedDate DATE
+);
+
+set serveroutput on;
+
+CREATE OR REPLACE TRIGGER CheckReturnDateTrigger
+BEFORE INSERT OR UPDATE ON Rentals
+FOR EACH ROW
+DECLARE
+    DateDifference NUMBER;
+BEGIN
+    DateDifference := :NEW.ReturnDate - :NEW.RentalDate;
+    IF DateDifference > 15 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'ReturnDate must be within 15 days from RentalDate.');
+    END IF;
+END;
+/
+
+
+CREATE OR REPLACE TRIGGER DeleteRentalTrigger
+BEFORE DELETE ON Rentals
+FOR EACH ROW
+BEGIN
+    INSERT INTO deleted_rental (RentalID, CustomerID, VehicleID, RentalDate, ReturnDate, TotalCost, DeletedDate)
+    VALUES (:OLD.RentalID, :OLD.CustomerID, :OLD.VehicleID, :OLD.RentalDate, :OLD.ReturnDate, :OLD.TotalCost, SYSDATE);
+END;
+/
+
+
+
+
+CREATE OR REPLACE FUNCTION GetRentalInfoList(
+    cid IN VARCHAR2,
+    vid IN VARCHAR2,
+    rid IN VARCHAR2
+)
+RETURN SYS_REFCURSOR
+IS
+    result_cursor SYS_REFCURSOR;
+BEGIN
+    OPEN result_cursor FOR
+        SELECT
+            c.FirstName,
+            c.LastName,
+            r.RentalDate AS StartDate,
+            r.ReturnDate,
+            v.RentalRate,
+            (r.ReturnDate - r.RentalDate) * v.RentalRate AS TotalCost
+        FROM
+            Customers c
+            JOIN Rentals r ON c.CustomerID = r.CustomerID
+            JOIN Vehicles v ON r.VehicleID = v.VehicleID
+        WHERE
+            r.CustomerID = cid
+            AND r.RentalID = rid
+            AND r.VehicleID = vid;
+
+    RETURN result_cursor;
+END GetRentalInfoList;
+/
+
+REM----------------------------------------------------------------------------------------------------------------
+
+
+
+INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone, Address)
+VALUES ('c1', 'John', 'Doe', 'john.doe@example.com', '123-456-7890', '123 Main St');
+
+INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone, Address)
+VALUES ('c2', 'Jane', 'Smith', 'jane.smith@example.com', '987-654-3210', '456 Oak St');
+
+INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone, Address)
+VALUES ('c3', 'Alice', 'Johnson', 'alice.johnson@example.com', '555-123-4567', '789 Elm St');
+
+INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone, Address)
+VALUES ('c4', 'Bob', 'Williams', 'bob.williams@example.com', '555-987-6543', '321 Pine Ave');
+
+INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone, Address)
+VALUES ('c5', 'Eva', 'Anderson', 'eva.anderson@example.com', '555-555-5555', '456 Maple Ln');
+
+INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone, Address)
+VALUES ('c6', 'Charlie', 'Brown', 'charlie.brown@example.com', '555-222-3333', '654 Oak Rd');
+
+INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone, Address)
+VALUES ('c7', 'Olivia', 'Davis', 'olivia.davis@example.com', '555-777-8888', '789 Birch St');
+
+INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone, Address)
+VALUES ('c8', 'Daniel', 'Miller', 'daniel.miller@example.com', '555-444-5555', '987 Cedar Ave');
+
+INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone, Address)
+VALUES ('c9', 'Sophia', 'Garcia', 'sophia.garcia@example.com', '555-999-1111', '123 Palm Dr');
+
+INSERT INTO Customers (CustomerID, FirstName, LastName, Email, Phone, Address)
+VALUES ('c10', 'Mason', 'Martinez', 'mason.martinez@example.com', '555-666-7777', '321 Spruce Blvd');
+
+
+REM--------------------------------------------------------------------------------------------------
+
+INSERT INTO Vehicles (VehicleID, Model, Make, Year, RentalRate,Seat,Ac)
+VALUES ('v1', 'Camry', 'Toyota', 2022, 50.00,5,'AC');
+
+INSERT INTO Vehicles (VehicleID, Model, Make, Year, RentalRate,Seat,Ac)
+VALUES ('v2', 'Accord', 'Honda', 2023, 55.00,5,'NONAC-');
+
+INSERT INTO Vehicles (VehicleID, Model, Make, Year, RentalRate,Seat,Ac)
+VALUES ('v3', 'Civic', 'Honda', 2022, 45.00,5,'AC');
+
+INSERT INTO Vehicles (VehicleID, Model, Make, Year, RentalRate,Seat,Ac)
+VALUES ('v4', 'Corolla', 'Toyota', 2023, 48.00,5,'NON-AC');
+
+INSERT INTO Vehicles (VehicleID, Model, Make, Year, RentalRate,Seat,Ac)
+VALUES ('v5', 'Mustang', 'Ford', 2022, 60.00,5,'AC');
+
+INSERT INTO Vehicles (VehicleID, Model, Make, Year, RentalRate,Seat,Ac)
+VALUES ('v6', 'Fusion', 'Ford', 2023, 55.00,7,'NON-AC');
+
+INSERT INTO Vehicles (VehicleID, Model, Make, Year, RentalRate,Seat,Ac)
+VALUES ('v7', 'Optima', 'Kia', 2022, 50.00,7,'AC');
+
+INSERT INTO Vehicles (VehicleID, Model, Make, Year, RentalRate,Seat,Ac)
+VALUES ('v8', 'Sonata', 'Hyundai', 2023, 52.00,7,'NON-AC');
+
+INSERT INTO Vehicles (VehicleID, Model, Make, Year, RentalRate,Seat,Ac)
+VALUES ('v9', 'Camaro', 'Chevrolet', 2022, 65.00,7,'AC');
+
+INSERT INTO Vehicles (VehicleID, Model, Make, Year, RentalRate,Seat,Ac)
+VALUES ('v10', 'Charger', 'Dodge', 2023, 70.00,7,'NON-AC');
+
+
+REM--------------------------------------------------------------------------------------------------
+
+INSERT INTO Rentals (RentalID, CustomerID, VehicleID, RentalDate, ReturnDate)
+VALUES ('r1', 'c1', 'v1', TO_DATE('2023-01-01', 'YYYY-MM-DD'), TO_DATE('2023-01-05', 'YYYY-MM-DD'));
+
+UPDATE Rentals
+SET TotalCost = (RETURNDATE - RENTALDATE) * (SELECT RentalRate FROM Vehicles WHERE VehicleID = 'v1')
+WHERE RentalID = 'r1';
+
+INSERT INTO Rentals (RentalID, CustomerID, VehicleID, RentalDate, ReturnDate)
+VALUES ('r2', 'c2', 'v2', TO_DATE('2023-02-10', 'YYYY-MM-DD'), TO_DATE('2023-02-15', 'YYYY-MM-DD'));
+
+UPDATE Rentals
+SET TotalCost = (RETURNDATE - RENTALDATE) * (SELECT RentalRate FROM Vehicles WHERE VehicleID = 'v2')
+WHERE RentalID = 'r2';
+
+INSERT INTO Rentals (RentalID, CustomerID, VehicleID, RentalDate, ReturnDate)
+VALUES ('r3', 'c3', 'v3', TO_DATE('2023-03-20', 'YYYY-MM-DD'), TO_DATE('2023-03-25', 'YYYY-MM-DD'));
+
+UPDATE Rentals
+SET TotalCost = (RETURNDATE - RENTALDATE) * (SELECT RentalRate FROM Vehicles WHERE VehicleID = 'v3')
+WHERE RentalID = 'r3';
+
+
+INSERT INTO Rentals (RentalID, CustomerID, VehicleID, RentalDate, ReturnDate)
+VALUES ('r4', 'c4', 'v4', TO_DATE('2023-04-05', 'YYYY-MM-DD'), TO_DATE('2023-04-10', 'YYYY-MM-DD'));
+
+UPDATE Rentals
+SET TotalCost = (RETURNDATE - RENTALDATE) * (SELECT RentalRate FROM Vehicles WHERE VehicleID = 'v4')
+WHERE RentalID = 'r4';
+
+INSERT INTO Rentals (RentalID, CustomerID, VehicleID, RentalDate, ReturnDate)
+VALUES ('r5', 'c5', 'v5', TO_DATE('2023-05-15', 'YYYY-MM-DD'), TO_DATE('2023-05-20', 'YYYY-MM-DD'));
+
+UPDATE Rentals
+SET TotalCost = (RETURNDATE - RENTALDATE) * (SELECT RentalRate FROM Vehicles WHERE VehicleID = 'v5')
+WHERE RentalID = 'r5';
+
+
+INSERT INTO Rentals (RentalID, CustomerID, VehicleID, RentalDate, ReturnDate)
+VALUES ('r6', 'c6', 'v6', TO_DATE('2023-06-01', 'YYYY-MM-DD'), TO_DATE('2023-06-07', 'YYYY-MM-DD'));
+
+UPDATE Rentals
+SET TotalCost = (RETURNDATE - RENTALDATE) * (SELECT RentalRate FROM Vehicles WHERE VehicleID = 'v6')
+WHERE RentalID = 'r6';
+
+
+INSERT INTO Rentals (RentalID, CustomerID, VehicleID, RentalDate, ReturnDate)
+VALUES ('r7', 'c7', 'v7', TO_DATE('2023-07-10', 'YYYY-MM-DD'), TO_DATE('2023-07-15', 'YYYY-MM-DD'));
+
+UPDATE Rentals
+SET TotalCost = (RETURNDATE - RENTALDATE) * (SELECT RentalRate FROM Vehicles WHERE VehicleID = 'v7')
+WHERE RentalID = 'r7';
+
+
+INSERT INTO Rentals (RentalID, CustomerID, VehicleID, RentalDate, ReturnDate)
+VALUES ('r8', 'c8', 'v8', TO_DATE('2023-08-18', 'YYYY-MM-DD'), TO_DATE('2023-08-25', 'YYYY-MM-DD'));
+
+UPDATE Rentals
+SET TotalCost = (RETURNDATE - RENTALDATE) * (SELECT RentalRate FROM Vehicles WHERE VehicleID = 'v8')
+WHERE RentalID = 'r8';
+
+
+INSERT INTO Rentals (RentalID, CustomerID, VehicleID, RentalDate, ReturnDate)
+VALUES ('r9', 'c9', 'v9', TO_DATE('2023-09-05', 'YYYY-MM-DD'), TO_DATE('2023-09-10', 'YYYY-MM-DD'));
+
+UPDATE Rentals
+SET TotalCost = (RETURNDATE - RENTALDATE) * (SELECT RentalRate FROM Vehicles WHERE VehicleID = 'v9')
+WHERE RentalID = 'r9';
+
+
+INSERT INTO Rentals (RentalID, CustomerID, VehicleID, RentalDate, ReturnDate)
+VALUES ('r10', 'c10', 'v10', TO_DATE('2023-10-12', 'YYYY-MM-DD'), TO_DATE('2023-10-18', 'YYYY-MM-DD'));
+
+UPDATE Rentals
+SET TotalCost = (RETURNDATE - RENTALDATE) * (SELECT RentalRate FROM Vehicles WHERE VehicleID = 'v10')
+WHERE RentalID = 'r10';
+
+
+commit;
+
